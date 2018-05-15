@@ -15,6 +15,8 @@ use rusoto_dynamodb::{
 };
 
 use std::time::Duration;
+use std::result::Result;
+use error::DynaError;
 
 /// A struct to contain details of the DynamoDB lock implementation.
 ///
@@ -54,12 +56,12 @@ pub struct DynamoDbDriver {
 }
 
 impl Locking for DistLock<DynamoDbDriver> {
-    fn acquire_lock(&mut self) -> &Self {
-        self
+    fn acquire_lock(&mut self) -> Result<(), DynaError> {
+        Ok(())
     }
 
-    fn release_lock(&mut self) -> &Self {
-        self
+    fn release_lock(&mut self) -> Result<(), DynaError> {
+        Ok(())
     }
 
     fn expired(&self) -> bool {

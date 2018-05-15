@@ -6,6 +6,8 @@ use super::{
 };
 
 use std::time::Duration;
+use std::result::Result;
+use error::DynaError;
 
 pub struct MockDetail {
     field_name: String
@@ -13,12 +15,12 @@ pub struct MockDetail {
 
 impl Locking for DistLock<String> {
 
-    fn acquire_lock(&mut self) -> &Self {
-        self
+    fn acquire_lock(&mut self) -> Result<(), DynaError> {
+        Ok(())
     }
 
-    fn release_lock(&mut self) -> &Self {
-        self
+    fn release_lock(&mut self) -> Result<(), DynaError> {
+        Ok(())
     }
 
     fn expired(&self) -> bool {

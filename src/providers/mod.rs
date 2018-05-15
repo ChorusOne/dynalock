@@ -9,10 +9,12 @@ pub mod mock;
 pub use self::dynamodb::DynamoDbDriver;
 
 use std::time::Duration;
+use std::result::Result;
+use error::DynaError;
 
 pub trait Locking {
-    fn acquire_lock(&mut self) -> &Self;
-    fn release_lock(&mut self) -> &Self;
+    fn acquire_lock(&mut self) -> Result<(), DynaError>;
+    fn release_lock(&mut self) -> Result<(), DynaError>;
     fn expired(&self) -> bool;
     fn remaining(&self) -> Duration;
 }
