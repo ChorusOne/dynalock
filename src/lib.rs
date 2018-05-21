@@ -1,6 +1,10 @@
 //! Some docs go here
 
 extern crate core;
+extern crate uuid;
+
+#[macro_use]
+extern crate maplit;
 
 #[cfg(feature = "dynamodb")]
 extern crate rusoto_core;

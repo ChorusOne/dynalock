@@ -11,6 +11,8 @@ categories = ["algorithms", "data-structures", "asynchronous"]
 keywords = ["distributed-systems", "locking", "aws", "dynamodb"]
 
 [dependencies]
+maplit = { version = "1.0.1" }
+uuid = { version = "0.6.3", features = ["v4"] }
 rusoto_core = { version = "0.32.0", optional = true }
 rusoto_dynamodb = { version = "0.32.0", optional = true }
 
