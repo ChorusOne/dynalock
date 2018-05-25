@@ -11,6 +11,8 @@ pub enum DynaErrorKind {
     UnhandledError,
     /// Provider error from another crate.
     ProviderError,
+    /// Lock has been acquired by another processor.
+    LockAlreadyAcquired,
 }
 
 impl DynaErrorKind {
@@ -18,7 +20,8 @@ impl DynaErrorKind {
     pub fn as_str(&self) -> &str {
         match *self {
             DynaErrorKind::UnhandledError => "unhandled internal error",
-            DynaErrorKind::ProviderError => "provider error"
+            DynaErrorKind::ProviderError => "provider error",
+            DynaErrorKind::LockAlreadyAcquired => "lock has been acquired by another processor",
         }
     }
 }
