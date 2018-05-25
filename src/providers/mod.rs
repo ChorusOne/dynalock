@@ -8,9 +8,9 @@ pub mod mock;
 #[cfg(feature = "dynamodb")]
 pub use self::dynamodb::DynamoDbDriver;
 
-use std::time::{Instant, Duration};
-use std::result::Result;
 use error::DynaError;
+use std::result::Result;
+use std::time::{Duration, Instant};
 
 pub trait Locking {
     type AcquireLockInputType;
@@ -44,7 +44,6 @@ pub struct DistLock<Driver> {
 }
 
 impl<Driver> DistLock<Driver> {
-
     pub fn new(driver: Driver, duration: Duration) -> Self {
         DistLock {
             driver: driver,
@@ -60,4 +59,3 @@ impl<Driver> DistLock<Driver> {
         self.duration
     }
 }
-

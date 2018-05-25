@@ -1,25 +1,15 @@
 //! An implementation of the locking API using DynamoDB as a storage provider.
 
-use std::result::Result;
 use std::default::Default;
+use std::result::Result;
 use std::time::{Duration, Instant};
 use uuid::Uuid;
 
-use rusoto_dynamodb::{
-    DynamoDb,
-    DynamoDbClient,
-    GetItemInput,
-    GetItemError,
-    UpdateItemInput,
-    UpdateItemError,
-    AttributeValue,
-};
+use rusoto_dynamodb::{AttributeValue, DynamoDb, DynamoDbClient, GetItemError, GetItemInput,
+                      UpdateItemError, UpdateItemInput};
 
+use super::{DistLock, Locking};
 use error::{DynaError, DynaErrorKind};
-use super::{
-    Locking,
-    DistLock
-};
 
 /// A struct to contain details of the DynamoDB lock implementation.
 ///
@@ -59,7 +49,7 @@ pub struct DynamoDbDriver {
     pub token_field_name: String,
     pub duration_field_name: String,
     pub partition_key_value: String,
-    current_token: String
+    current_token: String,
 }
 
 /// A struct to hold input variables for `acquire_lock` method.
@@ -72,14 +62,15 @@ pub struct DynamoDbAcquireLockInput {
 impl Default for DynamoDbAcquireLockInput {
     fn default() -> Self {
         DynamoDbAcquireLockInput {
-            timeout: Duration::from_secs(10)
+            timeout: Duration::from_secs(10),
         }
     }
 }
 
 mod expressions {
     pub const UPDATE: &'static str = "SET #token_field = :token, #duration_field = :lease";
-    pub const CONDITION: &'static str = "attribute_not_exists(#token_field) OR #token_field = :cond_token";
+    pub const CONDITION: &'static str =
+        "attribute_not_exists(#token_field) OR #token_field = :cond_token";
 }
 
 impl Locking for DistLock<DynamoDbDriver> {
@@ -118,8 +109,11 @@ impl Locking for DistLock<DynamoDbDriver> {
         };
 
         // Make a sync call with timeout
-        self.driver.client.update_item(&update_input)
-            .with_timeout(input.timeout).sync()?;
+        self.driver
+            .client
+            .update_item(&update_input)
+            .with_timeout(input.timeout)
+            .sync()?;
 
         ////////// After this point the lock clock starts //////////
         let start = Instant::now();
@@ -145,12 +139,19 @@ impl Locking for DistLock<DynamoDbDriver> {
         };
 
         // Make a sync call with timeout
-        let output = self.driver.client.get_item(&get_input).
-            with_timeout(input.timeout).sync()?;
+        let output = self.driver
+            .client
+            .get_item(&get_input)
+            .with_timeout(input.timeout)
+            .sync()?;
 
         // A lock item was found
         if output.item.is_some() {
-            let attr = output.item.as_ref().unwrap().get(&self.driver.token_field_name);
+            let attr = output
+                .item
+                .as_ref()
+                .unwrap()
+                .get(&self.driver.token_field_name);
 
             if attr.is_some() {
                 self.driver.current_token = attr.unwrap().s.as_ref().unwrap().clone();
@@ -167,20 +168,17 @@ impl Locking for DistLock<DynamoDbDriver> {
 
 impl From<GetItemError> for DynaError {
     fn from(err: GetItemError) -> DynaError {
-        DynaError::new(
-            DynaErrorKind::ProviderError,
-            Some(&err.to_string())
-        )
+        DynaError::new(DynaErrorKind::ProviderError, Some(&err.to_string()))
     }
 }
 
 impl From<UpdateItemError> for DynaError {
     fn from(err: UpdateItemError) -> DynaError {
         match err {
-            UpdateItemError::ConditionalCheckFailed(_) => DynaError::new(
-                DynaErrorKind::LockAlreadyAcquired, None)
-            ,
-            _ => DynaError::new(DynaErrorKind::ProviderError, Some(&err.to_string()))
+            UpdateItemError::ConditionalCheckFailed(_) => {
+                DynaError::new(DynaErrorKind::LockAlreadyAcquired, None)
+            }
+            _ => DynaError::new(DynaErrorKind::ProviderError, Some(&err.to_string())),
         }
     }
 }

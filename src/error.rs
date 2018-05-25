@@ -36,7 +36,7 @@ impl fmt::Display for DynaErrorKind {
 #[derive(Debug)]
 pub struct DynaError {
     kind: DynaErrorKind,
-    description: Option<String>
+    description: Option<String>,
 }
 
 impl DynaError {
@@ -44,7 +44,7 @@ impl DynaError {
     pub fn new(kind: DynaErrorKind, description: Option<&str>) -> Self {
         DynaError {
             kind: kind,
-            description: description.map(|desc| desc.to_string())
+            description: description.map(|desc| desc.to_string()),
         }
     }
 
@@ -58,7 +58,7 @@ impl fmt::Display for DynaError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self.description {
             Some(ref desc) => write!(f, "{}: {}", self.description(), desc),
-            None => write!(f, "{}", self.description())
+            None => write!(f, "{}", self.description()),
         }
     }
 }
@@ -73,7 +73,7 @@ impl From<DynaErrorKind> for DynaError {
     fn from(kind: DynaErrorKind) -> DynaError {
         DynaError {
             kind: kind,
-            description: None
+            description: None,
         }
     }
 }
