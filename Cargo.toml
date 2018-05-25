@@ -12,13 +12,13 @@ keywords = ["distributed-systems", "locking", "aws", "dynamodb"]
 
 [dependencies]
 maplit = { version = "1.0.1" }
-uuid = { version = "0.6.3", features = ["v4"] }
+uuid = { version = "0.6.3", features = ["v4"], optional = true }
 rusoto_core = { version = "0.32.0", optional = true }
 rusoto_dynamodb = { version = "0.32.0", optional = true }
 
 [features]
 default = ["dynamodb"]
-dynamodb = ["rusoto_core", "rusoto_dynamodb"]
+dynamodb = ["rusoto_core", "rusoto_dynamodb", "uuid"]
 
 [profile.release]
 opt-level = 3

@@ -1,7 +1,6 @@
 //! Some docs go here
 
 extern crate core;
-extern crate uuid;
 
 #[macro_use]
 extern crate maplit;
@@ -10,6 +9,8 @@ extern crate maplit;
 extern crate rusoto_core;
 #[cfg(feature = "dynamodb")]
 extern crate rusoto_dynamodb;
+#[cfg(feature = "dynamodb")]
+extern crate uuid;
 
 pub mod error;
 pub mod providers;
