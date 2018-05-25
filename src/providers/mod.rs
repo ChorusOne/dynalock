@@ -8,15 +8,17 @@ pub mod mock;
 #[cfg(feature = "dynamodb")]
 pub use self::dynamodb::DynamoDbDriver;
 
-use std::time::Duration;
+use std::time::{Instant, Duration};
 use std::result::Result;
 use error::DynaError;
 
 pub trait Locking {
-    fn acquire_lock(&mut self) -> Result<(), DynaError>;
-    fn release_lock(&mut self) -> Result<(), DynaError>;
-    fn expired(&self) -> bool;
-    fn remaining(&self) -> Duration;
+    type AcquireLockInputType;
+    type RefreshLockInputType;
+
+    fn acquire_lock(&mut self, input: Self::AcquireLockInputType) -> Result<Instant, DynaError>;
+    fn refresh_lock(&mut self, input: Self::RefreshLockInputType) -> Result<(), DynaError>;
+    fn remaining(&self, instant: Instant) -> Option<Duration>;
 }
 
 /// A struct to represent a distributed lock.
