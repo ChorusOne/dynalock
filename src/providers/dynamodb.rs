@@ -52,16 +52,16 @@ pub struct DynamoDbDriver {
     current_token: String,
 }
 
-/// A struct to hold input variables for `acquire_lock` method.
+/// A struct to hold input variables for locking methods method.
 #[derive(Debug, Clone)]
-pub struct DynamoDbAcquireLockInput {
-    /// After how much time we timeout from a lock acquisition request to DynamoDB.
+pub struct DynamoDbLockInput {
+    /// After how much time we timeout from a lock acquisition or refresh request to DynamoDB.
     pub timeout: Duration,
 }
 
-impl Default for DynamoDbAcquireLockInput {
+impl Default for DynamoDbLockInput {
     fn default() -> Self {
-        DynamoDbAcquireLockInput {
+        DynamoDbLockInput {
             timeout: Duration::from_secs(10),
         }
     }
@@ -74,8 +74,8 @@ mod expressions {
 }
 
 impl Locking for DistLock<DynamoDbDriver> {
-    type AcquireLockInputType = DynamoDbAcquireLockInput;
-    type RefreshLockInputType = DynamoDbAcquireLockInput;
+    type AcquireLockInputType = DynamoDbLockInput;
+    type RefreshLockInputType = DynamoDbLockInput;
 
     fn acquire_lock(&mut self, input: Self::AcquireLockInputType) -> Result<Instant, DynaError> {
         let new_token = Uuid::new_v4().hyphenated().to_string();
