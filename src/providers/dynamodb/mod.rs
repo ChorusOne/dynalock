@@ -133,7 +133,7 @@ where
     type AcquireLockInputType = DynamoDbLockInput;
     type RefreshLockInputType = DynamoDbLockInput;
 
-    fn acquire_lock(&mut self, input: Self::AcquireLockInputType) -> Result<Instant, DynaError> {
+    fn acquire_lock(&mut self, input: &Self::AcquireLockInputType) -> Result<Instant, DynaError> {
         let new_token = Uuid::new_v4().hyphenated().to_string();
 
         // Use new token as current token if this is our first run
@@ -180,7 +180,7 @@ where
         Ok(start)
     }
 
-    fn refresh_lock(&mut self, input: Self::RefreshLockInputType) -> Result<(), DynaError> {
+    fn refresh_lock(&mut self, input: &Self::RefreshLockInputType) -> Result<(), DynaError> {
         // Prepare get method input
         let get_input = GetItemInput {
             consistent_read: Some(true),

@@ -16,8 +16,8 @@ pub trait Locking {
     type AcquireLockInputType;
     type RefreshLockInputType;
 
-    fn acquire_lock(&mut self, input: Self::AcquireLockInputType) -> Result<Instant, DynaError>;
-    fn refresh_lock(&mut self, input: Self::RefreshLockInputType) -> Result<(), DynaError>;
+    fn acquire_lock(&mut self, input: &Self::AcquireLockInputType) -> Result<Instant, DynaError>;
+    fn refresh_lock(&mut self, input: &Self::RefreshLockInputType) -> Result<(), DynaError>;
     fn remaining(&self, instant: Instant) -> Option<Duration>;
 }
 
