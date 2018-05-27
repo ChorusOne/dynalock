@@ -5,11 +5,16 @@ use std::result::Result;
 use std::time::{Duration, Instant};
 use uuid::Uuid;
 
+use rusoto_core::{ProvideAwsCredentials, DispatchSignedRequest};
+use rusoto_core::reactor::{CredentialsProvider, RequestDispatcher};
 use rusoto_dynamodb::{AttributeValue, DynamoDb, DynamoDbClient, GetItemError, GetItemInput,
                       UpdateItemError, UpdateItemInput};
 
 use super::{DistLock, Locking};
 use error::{DynaError, DynaErrorKind};
+
+#[cfg(test)]
+mod tests;
 
 /// A struct to contain details of the DynamoDB lock implementation.
 ///
@@ -21,7 +26,7 @@ use error::{DynaError, DynaErrorKind};
 ///
 /// Initialize a new DynamoDbDriver struct.
 ///
-/// ```rust
+/// ```rust,ignore
 /// extern crate dynalock;
 /// extern crate rusoto_core;
 /// extern crate rusoto_dynamodb;
@@ -42,14 +47,61 @@ use error::{DynaError, DynaErrorKind};
 /// #     assert_eq!(detail.token_field_name, "rvn".to_string());
 /// # }
 /// ```
-pub struct DynamoDbDriver {
-    pub client: DynamoDbClient,
+pub struct DynamoDbDriver<P = CredentialsProvider, D = RequestDispatcher>
+where
+    P: ProvideAwsCredentials,
+    D: DispatchSignedRequest
+{
+    client: DynamoDbClient<P, D>,
+    table_name: String,
+    partition_key_field_name: String,
+    token_field_name: String,
+    duration_field_name: String,
+    partition_key_value: String,
+    current_token: String,
+}
+
+impl<P, D> DynamoDbDriver<P, D>
+where
+    P: ProvideAwsCredentials,
+    D: DispatchSignedRequest
+{
+    fn new(
+        client: DynamoDbClient<P, D>,
+        input: &DynamoDbDriverInput,
+        ) -> Self
+    {
+        DynamoDbDriver {
+            client: client,
+            table_name: input.table_name.clone(),
+            partition_key_field_name: input.partition_key_field_name.clone(),
+            partition_key_value: input.partition_key_value.clone(),
+            token_field_name: input.token_field_name.clone(),
+            duration_field_name: input.duration_field_name.clone(),
+            current_token: String::new()
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct DynamoDbDriverInput {
     pub table_name: String,
     pub partition_key_field_name: String,
-    pub token_field_name: String,
-    pub duration_field_name: String,
     pub partition_key_value: String,
-    current_token: String,
+    pub token_field_name: String,
+    pub duration_field_name: String
+}
+
+impl Default for DynamoDbDriverInput {
+    fn default() -> Self {
+        DynamoDbDriverInput {
+            table_name: String::new(),
+            partition_key_field_name: String::new(),
+            partition_key_value: String::from("singleton"),
+            token_field_name: String::from("rvn"),
+            duration_field_name: String::from("duration"),
+        }
+    }
 }
 
 /// A struct to hold input variables for locking methods method.
@@ -73,7 +125,11 @@ mod expressions {
         "attribute_not_exists(#token_field) OR #token_field = :cond_token";
 }
 
-impl Locking for DistLock<DynamoDbDriver> {
+impl<P, D> Locking for DistLock<DynamoDbDriver<P, D>>
+where
+    P: ProvideAwsCredentials + 'static,
+    D: DispatchSignedRequest + 'static
+{
     type AcquireLockInputType = DynamoDbLockInput;
     type RefreshLockInputType = DynamoDbLockInput;
 
