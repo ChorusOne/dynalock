@@ -1,4 +1,4 @@
-//! Data store providers which provide a common API to storage of lock states.
+//! Data store providers which provide a common API to storage of lock items.
 
 #[cfg(feature = "dynamodb")]
 pub mod dynamodb;

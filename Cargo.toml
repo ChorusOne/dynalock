@@ -10,15 +10,18 @@ readme = "README.md"
 categories = ["algorithms", "data-structures", "asynchronous"]
 keywords = ["distributed-systems", "locking", "aws", "dynamodb"]
 
+[features]
+default = ["dynamodb"]
+dynamodb = ["rusoto_core", "rusoto_dynamodb", "uuid"]
+
 [dependencies]
 maplit = { version = "1.0.1" }
 uuid = { version = "0.6.3", features = ["v4"], optional = true }
 rusoto_core = { version = "0.32.0", optional = true }
 rusoto_dynamodb = { version = "0.32.0", optional = true }
 
-[features]
-default = ["dynamodb"]
-dynamodb = ["rusoto_core", "rusoto_dynamodb", "uuid"]
+[dev-dependencies]
+rusoto_mock = { version = "0.26.0" }
 
 [profile.release]
 opt-level = 3
