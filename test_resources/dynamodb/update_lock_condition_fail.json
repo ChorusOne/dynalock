@@ -1,0 +1,4 @@
+{
+    "__type": "com.amazonaws.dynamodb.v20120810#ConditionalCheckFailedException",
+    "message": "The conditional request failed"
+}
