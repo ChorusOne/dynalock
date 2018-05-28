@@ -7,8 +7,8 @@ use super::*;
 
 use std::default::Default;
 
-use rusoto_core::Region;
 use self::rusoto_mock::*;
+use rusoto_core::Region;
 
 #[test]
 fn driver_input_default_is_sane() {
@@ -23,7 +23,10 @@ fn driver_input_default_is_sane() {
 
 #[test]
 fn first_to_acquire_the_lock() {
-    let body = MockResponseReader::read_response("test_resources/dynamodb", "update_lock_item_success.json");
+    let body = MockResponseReader::read_response(
+        "test_resources/dynamodb",
+        "update_lock_item_success.json",
+    );
     let mock = MockRequestDispatcher::with_status(200).with_body(&body);
 
     // Prepare input for DynamoDbDriver
@@ -43,7 +46,10 @@ fn first_to_acquire_the_lock() {
 
 #[test]
 fn second_to_acquire_the_lock() {
-    let body = MockResponseReader::read_response("test_resources/dynamodb", "update_lock_condition_fail.json");
+    let body = MockResponseReader::read_response(
+        "test_resources/dynamodb",
+        "update_lock_condition_fail.json",
+    );
     let mock = MockRequestDispatcher::with_status(400).with_body(&body);
 
     // Prepare input for DynamoDbDriver
@@ -59,5 +65,8 @@ fn second_to_acquire_the_lock() {
 
     let result = lock.acquire_lock(&DynamoDbLockInput::default());
     assert!(result.is_err());
-    assert_eq!(result.err().unwrap().kind(), DynaErrorKind::LockAlreadyAcquired);
+    assert_eq!(
+        result.err().unwrap().kind(),
+        DynaErrorKind::LockAlreadyAcquired
+    );
 }

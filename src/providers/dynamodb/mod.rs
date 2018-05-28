@@ -5,8 +5,8 @@ use std::result::Result;
 use std::time::{Duration, Instant};
 use uuid::Uuid;
 
-use rusoto_core::{ProvideAwsCredentials, DispatchSignedRequest};
 use rusoto_core::reactor::{CredentialsProvider, RequestDispatcher};
+use rusoto_core::{DispatchSignedRequest, ProvideAwsCredentials};
 use rusoto_dynamodb::{AttributeValue, DynamoDb, DynamoDbClient, GetItemError, GetItemInput,
                       UpdateItemError, UpdateItemInput};
 
@@ -50,7 +50,7 @@ mod tests;
 pub struct DynamoDbDriver<P = CredentialsProvider, D = RequestDispatcher>
 where
     P: ProvideAwsCredentials,
-    D: DispatchSignedRequest
+    D: DispatchSignedRequest,
 {
     client: DynamoDbClient<P, D>,
     table_name: String,
@@ -64,13 +64,9 @@ where
 impl<P, D> DynamoDbDriver<P, D>
 where
     P: ProvideAwsCredentials,
-    D: DispatchSignedRequest
+    D: DispatchSignedRequest,
 {
-    fn new(
-        client: DynamoDbClient<P, D>,
-        input: &DynamoDbDriverInput,
-        ) -> Self
-    {
+    fn new(client: DynamoDbClient<P, D>, input: &DynamoDbDriverInput) -> Self {
         DynamoDbDriver {
             client: client,
             table_name: input.table_name.clone(),
@@ -78,7 +74,7 @@ where
             partition_key_value: input.partition_key_value.clone(),
             token_field_name: input.token_field_name.clone(),
             duration_field_name: input.duration_field_name.clone(),
-            current_token: String::new()
+            current_token: String::new(),
         }
     }
 }
@@ -89,7 +85,7 @@ pub struct DynamoDbDriverInput {
     pub partition_key_field_name: String,
     pub partition_key_value: String,
     pub token_field_name: String,
-    pub duration_field_name: String
+    pub duration_field_name: String,
 }
 
 impl Default for DynamoDbDriverInput {
@@ -128,7 +124,7 @@ mod expressions {
 impl<P, D> Locking for DistLock<DynamoDbDriver<P, D>>
 where
     P: ProvideAwsCredentials + 'static,
-    D: DispatchSignedRequest + 'static
+    D: DispatchSignedRequest + 'static,
 {
     type AcquireLockInputType = DynamoDbLockInput;
     type RefreshLockInputType = DynamoDbLockInput;
