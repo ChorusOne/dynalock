@@ -1,0 +1,10 @@
+{
+    "Item": {
+        "lock_id": {
+            "S": "singleton"
+        },
+        "rvn": {
+            "S": "test RVN token"
+        }
+    }
+}
