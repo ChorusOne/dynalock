@@ -107,36 +107,36 @@ lease duration.
 - Application process makes a system call that blocks the process for a period of
 time.
 - OS scheduler preempts the process due to a hardware interrupt or thread quantum
-exahustion.
+depletion.
 
 Given that respecting a deadline is a hard problem, it becomes apparent that
-there're certain tradeoffs that we have to chose from. For some applications
+there are certain tradeoffs that we have to chose from. For some applications
 availability is critical, for others consistency violations are world ending.
 Dynalock leases allows us to find a fine-grained balance between these two extreme
 requirements.
 
 ### Processor Consistency
 
-Increse lease duration beyond any reasonable doubt to detect processor failure. By
+Increase lease duration beyond any reasonable doubt to detect processor failure. By
 increasing the lease duration to several minutes or hours you can confidently
 eliminate all doubts around processors missing a deadline due to temporary
 interruptions or other operations' latency. In applications that focus on
 consistency this is not so bad given that your application requirements can tolerate
 a downtime of the lease duration (e.g., lease duration of 1 hour means that your
 live processor could be blocked for 1 hour before attempting to acquire the lock).
-This appraoch is suitable for applications where high performance is desierable, as
+This approach is suitable for applications where high performance is desirable, as
 the lease duration grows you'll be able to process more requests or data before
 having to try to acquire the lock again which is an expensive operation.
 
 ### Processor Availability
 
 In order to achieve minimal downtime we decrease the lease duration to the minimum
-achiveable. Reducing the lease duration requires us to have a much greater control
+achievable. Reducing the lease duration requires us to have a much greater control
 over the network, the OS and the underlying hardware, minimizing and bounding
 overhead latencies as much as possible. For starters a stable and low latency
-network link is required as well as a realtime OS scheduler (e.g., Linux's FIFO,
+network link is required as well as a real-time OS scheduler (e.g., Linux's FIFO,
 Round Robin or Deadline scheduler) and possibly CPU isolation (e.g., cpusets), how
-to configure a [realtime] scheduler or CPU isolation is outside the scope of this
+to configure a [real-time] scheduler or CPU isolation is outside the scope of this
 document.
 
 The combination of the above two approaches allows us to find an acceptable balance
@@ -154,5 +154,5 @@ questions please feel free to ask.
 [lease]: https://dl.acm.org/citation.cfm?id=74870
 [providers]: #providers
 [algorithm]: #algorithm
-[realtime]: http://linuxrealtime.org/
+[real-time]: http://linuxrealtime.org/
 [contributing]: https://github.com/chorusone/dynalock/blob/master/CONTRIBUTING.md
