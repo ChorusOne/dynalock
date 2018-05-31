@@ -24,8 +24,7 @@ use rusoto_core::{DispatchSignedRequest, ProvideAwsCredentials};
 use rusoto_dynamodb::{AttributeValue, DynamoDb, DynamoDbClient, GetItemError, GetItemInput,
                       UpdateItemError, UpdateItemInput};
 
-use super::{DistLock, Locking};
-use error::{DynaError, DynaErrorKind};
+use {DistLock, Locking, DynaError, DynaErrorKind};
 
 #[cfg(test)]
 mod tests;
@@ -184,7 +183,7 @@ where
         ////////// After this point the lock clock starts //////////
         let start = Instant::now();
 
-        // Lock acquired successfully
+        // Lock acquired successfully, record the new fence token
         self.driver.current_token = new_token.clone();
 
         Ok(start)
