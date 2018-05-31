@@ -1,4 +1,5 @@
-# Dynalock
+Dynalock [![Build Status](https://img.shields.io/travis/chorusone/dynalock/master.svg)](https://travis-ci.org/chorusone/dynalock) [![Crates.io](https://img.shields.io/crates/v/dynalock.svg)](https://crates.io/crates/dynalock) [![Documentation](https://img.shields.io/badge/docs-current-blue.svg)](https://docs.rs/dynalock)
+========
 
 A [lease] based distributed lock. Dynalock [algorithm] supports lease based
 distributed locking implementations through [providers] that support a strongly
@@ -72,9 +73,9 @@ specific implementation details (e.g., `dynalock::providers::dynamodb`).
 ## Algorithm
 
 The [lease] based Dynalock locking algorithm relies on a CAS primitive and a
-monotonic clock per processor. The algorithm provides _dynamic_ consistency in the
-sense that no two processors will be able to hold the lock given that each processor
-respects the lock lease duration.
+monotonic clock per processor. The algorithm provides properties of an advisory lock,
+in the sense that no two processors will be able to hold the lock given that each
+processor honors the lock lease duration.
 
 A lock item synchronizes processors' access to a single shared conceptual resource.
 Each lock item has a fence token attribute -- we'll call it a Record Version Number
@@ -109,7 +110,7 @@ time.
 - OS scheduler preempts the process due to a hardware interrupt or thread quantum
 depletion.
 
-Given that respecting a deadline is a hard problem, it becomes apparent that
+Given that honoring a deadline is a hard problem, it becomes apparent that
 there are certain tradeoffs that we have to chose from. For some applications
 availability is critical, for others consistency violations are world ending.
 Dynalock leases allows us to find a fine-grained balance between these two extreme
