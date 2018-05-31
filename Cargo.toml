@@ -1,6 +1,6 @@
 [package]
 name = "dynalock"
-description = "Distributed locking algorithm with support for DynamoDB"
+description = "A lease based distributed locking algorithm with support for DynamoDB"
 version = "0.1.0"
 license = "Apache-2.0"
 authors = ["Amr Ali <amr@chorus.one>"]
@@ -8,20 +8,20 @@ homepage = "https://github.com/chorusone/dynalock"
 repository = "https://github.com/chorusone/dynalock/tree/master"
 readme = "README.md"
 categories = ["algorithms", "data-structures", "asynchronous"]
-keywords = ["distributed-systems", "locking", "aws", "dynamodb"]
+keywords = ["distributed", "locking", "dynamodb", "lease", "advisory"]
 
 [features]
 default = ["dynamodb"]
 dynamodb = ["rusoto_core", "rusoto_dynamodb", "uuid"]
 
 [dependencies]
-maplit = { version = "1.0.1" }
-uuid = { version = "0.6.3", features = ["v4"], optional = true }
-rusoto_core = { version = "0.32.0", optional = true }
-rusoto_dynamodb = { version = "0.32.0", optional = true }
+maplit = { version = "^1.0" }
+uuid = { version = "^0.6", features = ["v4"], optional = true }
+rusoto_core = { version = "^0.32", optional = true }
+rusoto_dynamodb = { version = "^0.32", optional = true }
 
 [dev-dependencies]
-rusoto_mock = { version = "0.26.0" }
+rusoto_mock = { version = "^0.26" }
 
 [profile.release]
 opt-level = 3
