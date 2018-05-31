@@ -10,6 +10,9 @@ readme = "README.md"
 categories = ["algorithms", "data-structures", "asynchronous"]
 keywords = ["distributed", "locking", "dynamodb", "lease", "advisory"]
 
+[badges]
+travis-ci = { repository = "chorusone/dynalock", branch = "master" }
+
 [features]
 default = ["dynamodb"]
 dynamodb = ["rusoto_core", "rusoto_dynamodb", "uuid"]
