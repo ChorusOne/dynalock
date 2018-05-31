@@ -2,7 +2,7 @@
 name = "dynalock"
 description = "Distributed locking algorithm with support for DynamoDB"
 version = "0.1.0"
-license = "MIT"
+license = "Apache-2.0"
 authors = ["Amr Ali <amr@chorus.one>"]
 homepage = "https://github.com/chorusone/dynalock"
 repository = "https://github.com/chorusone/dynalock/tree/master"
