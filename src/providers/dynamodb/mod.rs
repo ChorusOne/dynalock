@@ -180,6 +180,9 @@ mod expressions {
         "SET #token_field = :new_token, #duration_field = :lease, #ttl_field = :ttl";
     pub const ACQUIRE_CONDITION: &'static str =
         "attribute_not_exists(#token_field) OR #token_field = :cond_current_token";
+    pub const RELEASE_UPDATE: &'static str = "REMOVE #token_field";
+    pub const RELEASE_CONDITION: &'static str =
+        "attribute_exists(#token_field) AND #token_field = :cond_current_token";
 }
 
 impl<P, D> Locking for DistLock<DynamoDbDriver<P, D>>
@@ -189,6 +192,7 @@ where
 {
     type AcquireLockInputType = DynamoDbLockInput;
     type RefreshLockInputType = DynamoDbLockInput;
+    type ReleaseLockInputType = DynamoDbLockInput;
 
     fn acquire_lock(&mut self, input: &Self::AcquireLockInputType) -> Result<Instant, DynaError> {
         let new_token = Uuid::new_v4().hyphenated().to_string();
@@ -287,6 +291,44 @@ where
                 );
             }
         }
+
+        Ok(())
+    }
+
+    fn release_lock(&mut self, input: &Self::ReleaseLockInputType) -> Result<(), DynaError> {
+        // Prepare update method input
+        let update_input = UpdateItemInput {
+            table_name: self.driver.table_name.clone(),
+            update_expression: Some(String::from(expressions::RELEASE_UPDATE)),
+            condition_expression: Some(String::from(expressions::RELEASE_CONDITION)),
+            expression_attribute_names: Some(hashmap! {
+                String::from("#token_field") => self.driver.token_field_name.clone(),
+            }),
+            expression_attribute_values: Some(hashmap! {
+                String::from(":cond_current_token") => AttributeValue { s: Some(self.driver.current_token.clone()), ..Default::default() }
+            }),
+            key: hashmap! {
+                self.driver.partition_key_field_name.clone() => AttributeValue {
+                    s: Some(self.driver.partition_key_value.clone()),
+                    ..Default::default()
+                },
+            },
+            ..Default::default()
+        };
+
+        // Make a sync call with timeout
+        self.driver
+            .client
+            .update_item(&update_input)
+            .with_timeout(input.timeout)
+            .sync()?;
+
+        // Lock released successfully, clear the fence token
+        info!(
+            "lock '{}' successfully released for token ({})",
+            self.driver.partition_key_value, self.driver.current_token
+        );
+        self.driver.current_token.clear();
 
         Ok(())
     }
