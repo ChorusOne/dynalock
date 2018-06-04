@@ -98,9 +98,15 @@ mod tests {
 
     #[test]
     fn test_dynaerrorkind_as_str_success() {
-        assert_eq!(DynaErrorKind::UnhandledError.as_str(), "unhandled internal error");
+        assert_eq!(
+            DynaErrorKind::UnhandledError.as_str(),
+            "unhandled internal error"
+        );
         assert_eq!(DynaErrorKind::ProviderError.as_str(), "provider error");
-        assert_eq!(DynaErrorKind::LockAlreadyAcquired.as_str(), "lock has been acquired by another processor");
+        assert_eq!(
+            DynaErrorKind::LockAlreadyAcquired.as_str(),
+            "lock has been acquired by another processor"
+        );
     }
 
     #[test]
