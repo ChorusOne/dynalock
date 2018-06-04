@@ -81,7 +81,7 @@ A lock item cooperatively synchronizes processors' access to a single shared
 conceptual resource. Each lock item has a fence token attribute
 (e.g., a Record Version Number or an RVN) which is used for the CAS operation.
 
-<img src="./doc_resources/dynalock_safety_violation.svg", width="70%" height="70%">
+[<img src="doc_resources/dynalock_safety_violation.svg" width="70%" height="70%">]()
 
 Note that before the lease ends there's an option for us to release the lock before
 we try to reacquire it. Releasing the lock acts as a yield to allow other processors
