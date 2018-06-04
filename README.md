@@ -77,31 +77,20 @@ monotonic clock per processor. The algorithm provides properties of an advisory 
 in the sense that no two processors will be able to hold the lock given that each
 processor honors the lock lease duration.
 
-A lock item synchronizes processors' access to a single shared conceptual resource.
-Each lock item has a fence token attribute -- we'll call it a Record Version Number
-(RVN) -- and a state to indicate which state the lock is in (e.g., locked,
-released).
+A lock item cooperatively synchronizes processors' access to a single shared
+conceptual resource. Each lock item has a fence token attribute
+(e.g., a Record Version Number or an RVN) which is used for the CAS operation.
 
-1. Processor A: Try to acquire the lock with RVN-X and previous RVN is none.
-(success)
-2. Processor B: Try to acquire the lock with RVN-Y and previous RVN is none. (fail,
-RVN is now X)
-3. Processor B: Issue a **strongly consistent** read of the lock item and sleep for
-the lock's lease duration.
-4. Processor A: Long pause, lease expired.
-5. Processor B: Wakes up and tries to acquire the lock with RVN-C and previous RVN
-is X (success)
-6. Processor A: Resumes, still believes it has the lock. (**Consistency
-violation**)
+<img src="./doc_resources/dynalock_safety_violation.svg", width="70%" height="70%">
 
 Note that before the lease ends there's an option for us to release the lock before
 we try to reacquire it. Releasing the lock acts as a yield to allow other processors
-a chance of acquiring the lock.
+a chance of acquiring the lock when we have a long lease duration.
 
-Since language X is a non-GC language or runtime we could argue that (4) will not
-occur due to the lack of a garbage collector, except that GC-pauses are not the only
-way a process could be paused. A process can be temporarily stopped for a multitude
-of reasons:
+Since language X is a non-GC language or runtime we could argue that the safety
+violation will not occur due to the lack of a garbage collector, except that
+GC-pauses are not the only way a process could be paused. A process can be
+temporarily stopped for a multitude of reasons:
 
 - An I/O read operation that isn't time bounded by less than the remaining of the
 lease duration.
@@ -127,7 +116,8 @@ a downtime of the lease duration (e.g., lease duration of 1 hour means that your
 live processor could be blocked for 1 hour before attempting to acquire the lock).
 This approach is suitable for applications where high performance is desirable, as
 the lease duration grows you'll be able to process more requests or data before
-having to try to acquire the lock again which is an expensive operation.
+having to try to acquire the lock again as long as processing a single request
+is cheaper than trying to acquire a lock.
 
 ### Processor Availability
 
