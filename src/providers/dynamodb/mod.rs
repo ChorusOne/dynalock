@@ -12,11 +12,31 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
-//! An implementation of the locking API using DynamoDB as a storage provider.
+//! An implementation of the locking API using DynamoDB as a storage provider
+//!
+//! This implementation fully implements the `Locking` trait for the `DistLock<DynamoDbDriver>`
+//! structure. Lock items on the DynamoDB table are composed of the following attributes:
+//!
+//! - Partition key field
+//! - Fence token field
+//! - Lease duration field
+//! - TTL field
+//!
+//! The partition key of the table is used as an identifier of the shared resource,
+//! while the fence token is used to prevent the ABA problem. The duration attribute
+//! is used to specify the lock's duration. The TTL field is used to tell DynamoDB
+//! when to garbage-collect or remove items that has expired, that if TTL is
+//! configured on the table.
+//!
+//! Currently the fence token is implemented by generating a UUID v4 token for
+//! every `acquire_lock` and `release_lock` operation. UUID v4 security and strength depends on
+//! the recent implementation of a reseeded version of the HC-128 CSPRNG in `std::rand`,
+//! as long as this invariant holds, fence token collisions are as rare as the CSPRNG period
+//! allows it to be (i.e., incredibly long period).
 
 use std::default::Default;
 use std::result::Result;
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime, SystemTimeError, UNIX_EPOCH};
 use uuid::Uuid;
 
 use rusoto_core::reactor::{CredentialsProvider, RequestDispatcher};
@@ -24,40 +44,34 @@ use rusoto_core::{DispatchSignedRequest, ProvideAwsCredentials};
 use rusoto_dynamodb::{AttributeValue, DynamoDb, DynamoDbClient, GetItemError, GetItemInput,
                       UpdateItemError, UpdateItemInput};
 
-use {DistLock, Locking, DynaError, DynaErrorKind};
+use {DistLock, DynaError, DynaErrorKind, Locking};
 
 #[cfg(test)]
 mod tests;
 
-/// A struct to contain details of the DynamoDB lock implementation.
-///
-/// * `region`: An Amazon Web Services region.
-/// * `table_name`: The DynamoDB table name.
-/// * `token_field_name`: The token field to be used for RVN.
+/// A structure to contain details of the DynamoDB lock implementation.
 ///
 /// # Examples
 ///
 /// Initialize a new DynamoDbDriver struct.
 ///
-/// ```rust,ignore
+/// ```rust,no_run
 /// extern crate dynalock;
-/// extern crate rusoto_core;
-/// extern crate rusoto_dynamodb;
 ///
-/// use rusoto_core::Region;
-/// use rusoto_dynamodb::DynamoDbClient;
+/// use dynalock::rusoto_core::Region;
+/// use dynalock::rusoto_dynamodb::DynamoDbClient;
 ///
-/// use dynalock::providers::DynamoDbDriver;
+/// use dynalock::dynamodb::{DynamoDbDriver, DynamoDbDriverInput};
 ///
 /// # fn main() {
-///     let detail = DynamoDbDriver {
-///          client: DynamoDbClient::simple(Region::UsEast1),
+///     let input = DynamoDbDriverInput {
 ///          table_name: "locks_table".to_string(),
-///          token_field_name: "rvn".to_string()
+///          partition_key_field_name: String::from("lock_id"),
+///          ..Default::default()
 ///     };
 ///
-/// #     assert_eq!(detail.table_name, "locks_table".to_string());
-/// #     assert_eq!(detail.token_field_name, "rvn".to_string());
+///     let driver = DynamoDbDriver::new(
+///         DynamoDbClient::simple(Region::UsEast1), &input);
 /// # }
 /// ```
 pub struct DynamoDbDriver<P = CredentialsProvider, D = RequestDispatcher>
@@ -70,6 +84,8 @@ where
     partition_key_field_name: String,
     token_field_name: String,
     duration_field_name: String,
+    ttl_field_name: String,
+    ttl_value: u64,
     partition_key_value: String,
     current_token: String,
 }
@@ -79,7 +95,9 @@ where
     P: ProvideAwsCredentials,
     D: DispatchSignedRequest,
 {
-    fn new(client: DynamoDbClient<P, D>, input: &DynamoDbDriverInput) -> Self {
+    /// Initialize a new DynamoDbDriver structure and fill it with the `client`
+    /// and `input` variables' contents.
+    pub fn new(client: DynamoDbClient<P, D>, input: &DynamoDbDriverInput) -> Self {
         DynamoDbDriver {
             client: client,
             table_name: input.table_name.clone(),
@@ -87,18 +105,39 @@ where
             partition_key_value: input.partition_key_value.clone(),
             token_field_name: input.token_field_name.clone(),
             duration_field_name: input.duration_field_name.clone(),
+            ttl_field_name: input.ttl_field_name.clone(),
+            ttl_value: input.ttl_value,
             current_token: String::new(),
         }
     }
 }
 
+/// The number of seconds in 24 hours.
+pub const DAY_SECONDS: u64 = 86400;
+
+/// A structure that describes the inputs to `DynamoDbDriver::new`.
+///
+/// This structure's `Default` trait implementation provides sane default
+/// values. Only the `table_name` and the `partition_key_field_name` fields are
+/// required.
 #[derive(Debug)]
 pub struct DynamoDbDriverInput {
+    /// The DynamoDB lock table name to be used.
     pub table_name: String,
+    /// The partition key field name.
     pub partition_key_field_name: String,
+    /// The partition key value (default: "singleton"). This field should be provided
+    /// to use the lock driver on multiple shared resources, each represented by a
+    /// partition key value.
     pub partition_key_value: String,
+    /// The fence token field name (default: "rvn").
     pub token_field_name: String,
+    /// The lease duration field name (default: "duration").
     pub duration_field_name: String,
+    /// The TTL field name (default: "ttl").
+    pub ttl_field_name: String,
+    /// The TTL value to be added to the wall clock for expiration (default: 7 days in seconds).
+    pub ttl_value: u64,
 }
 
 impl Default for DynamoDbDriverInput {
@@ -109,29 +148,38 @@ impl Default for DynamoDbDriverInput {
             partition_key_value: String::from("singleton"),
             token_field_name: String::from("rvn"),
             duration_field_name: String::from("duration"),
+            ttl_field_name: String::from("ttl"),
+            ttl_value: DAY_SECONDS * 7,
         }
     }
 }
 
-/// A struct to hold input variables for locking methods method.
+/// A struct to hold input variables for the `Locking` trait methods inputs.
+///
+/// The optional field `consistent_read` is not required to be set for the `refresh_lock`
+/// method, this field only exists for convenience.
 #[derive(Debug, Clone)]
 pub struct DynamoDbLockInput {
     /// After how much time we timeout from a lock acquisition or refresh request to DynamoDB.
     pub timeout: Duration,
+    /// Whether to carry out a strongly consistent read on the table within a refresh request.
+    pub consistent_read: Option<bool>,
 }
 
 impl Default for DynamoDbLockInput {
     fn default() -> Self {
         DynamoDbLockInput {
             timeout: Duration::from_secs(10),
+            consistent_read: Some(false),
         }
     }
 }
 
 mod expressions {
-    pub const UPDATE: &'static str = "SET #token_field = :token, #duration_field = :lease";
-    pub const CONDITION: &'static str =
-        "attribute_not_exists(#token_field) OR #token_field = :cond_token";
+    pub const ACQUIRE_UPDATE: &'static str =
+        "SET #token_field = :new_token, #duration_field = :lease, #ttl_field = :ttl";
+    pub const ACQUIRE_CONDITION: &'static str =
+        "attribute_not_exists(#token_field) OR #token_field = :cond_current_token";
 }
 
 impl<P, D> Locking for DistLock<DynamoDbDriver<P, D>>
@@ -150,19 +198,25 @@ where
             self.driver.current_token = new_token.clone();
         }
 
+        // Get time since EPOCH in seconds and add to it the TTL value
+        let ttl_secs =
+            SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs() + self.driver.ttl_value;
+
         // Prepare update method input
         let update_input = UpdateItemInput {
             table_name: self.driver.table_name.clone(),
-            update_expression: Some(String::from(expressions::UPDATE)),
-            condition_expression: Some(String::from(expressions::CONDITION)),
+            update_expression: Some(String::from(expressions::ACQUIRE_UPDATE)),
+            condition_expression: Some(String::from(expressions::ACQUIRE_CONDITION)),
             expression_attribute_names: Some(hashmap! {
                 String::from("#token_field") => self.driver.token_field_name.clone(),
-                String::from("#duration_field") => self.driver.duration_field_name.clone()
+                String::from("#duration_field") => self.driver.duration_field_name.clone(),
+                String::from("#ttl_field") => self.driver.ttl_field_name.clone(),
             }),
             expression_attribute_values: Some(hashmap! {
-                String::from(":token") => AttributeValue { s: Some(new_token.clone()), ..Default::default() },
+                String::from(":new_token") => AttributeValue { s: Some(new_token.clone()), ..Default::default() },
                 String::from(":lease") => AttributeValue { n: Some(self.duration.as_secs().to_string()), ..Default::default() },
-                String::from(":cond_token") => AttributeValue { s: Some(self.driver.current_token.clone()), ..Default::default() }
+                String::from(":ttl") => AttributeValue { n: Some(ttl_secs.to_string()), ..Default::default() },
+                String::from(":cond_current_token") => AttributeValue { s: Some(self.driver.current_token.clone()), ..Default::default() }
             }),
             key: hashmap! {
                 self.driver.partition_key_field_name.clone() => AttributeValue {
@@ -184,6 +238,13 @@ where
         let start = Instant::now();
 
         // Lock acquired successfully, record the new fence token
+        info!(
+            "lock '{}' acquired successfully, current token ({}) new token ({}) lease ({}s)",
+            self.driver.partition_key_value,
+            self.driver.current_token,
+            new_token,
+            self.duration.as_secs()
+        );
         self.driver.current_token = new_token.clone();
 
         Ok(start)
@@ -192,7 +253,7 @@ where
     fn refresh_lock(&mut self, input: &Self::RefreshLockInputType) -> Result<(), DynaError> {
         // Prepare get method input
         let get_input = GetItemInput {
-            consistent_read: Some(true),
+            consistent_read: input.consistent_read,
             table_name: self.driver.table_name.clone(),
             key: hashmap! {
                 self.driver.partition_key_field_name.clone() => AttributeValue {
@@ -220,6 +281,10 @@ where
 
             if attr.is_some() {
                 self.driver.current_token = attr.unwrap().s.as_ref().unwrap().clone();
+                info!(
+                    "lock '{}' refreshed successful, found new token ({})",
+                    self.driver.partition_key_value, self.driver.current_token
+                );
             }
         }
 
@@ -231,8 +296,16 @@ where
     }
 }
 
+impl From<SystemTimeError> for DynaError {
+    fn from(err: SystemTimeError) -> DynaError {
+        error!("{}", err);
+        DynaError::new(DynaErrorKind::UnhandledError, Some(&err.to_string()))
+    }
+}
+
 impl From<GetItemError> for DynaError {
     fn from(err: GetItemError) -> DynaError {
+        error!("{}", err);
         DynaError::new(DynaErrorKind::ProviderError, Some(&err.to_string()))
     }
 }
@@ -241,9 +314,13 @@ impl From<UpdateItemError> for DynaError {
     fn from(err: UpdateItemError) -> DynaError {
         match err {
             UpdateItemError::ConditionalCheckFailed(_) => {
+                warn!("{}", err);
                 DynaError::new(DynaErrorKind::LockAlreadyAcquired, None)
             }
-            _ => DynaError::new(DynaErrorKind::ProviderError, Some(&err.to_string())),
+            _ => {
+                error!("{}", err);
+                DynaError::new(DynaErrorKind::ProviderError, Some(&err.to_string()))
+            }
         }
     }
 }
