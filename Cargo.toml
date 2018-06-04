@@ -18,6 +18,7 @@ default = ["dynamodb"]
 dynamodb = ["rusoto_core", "rusoto_dynamodb", "uuid"]
 
 [dependencies]
+log = { version = "^0.4" }
 maplit = { version = "^1.0" }
 uuid = { version = "^0.6", features = ["v4"], optional = true }
 rusoto_core = { version = "^0.32", optional = true }

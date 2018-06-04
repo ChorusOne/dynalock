@@ -17,6 +17,9 @@
 extern crate core;
 
 #[macro_use]
+extern crate log;
+
+#[macro_use]
 extern crate maplit;
 
 #[cfg(feature = "dynamodb")]
