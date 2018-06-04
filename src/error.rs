@@ -21,7 +21,7 @@ use std::string::{String, ToString};
 /// Kinds of errors
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum DynaErrorKind {
-    /// Unhandled error from another crate.
+    /// Unhandled error from another crate or the standard library.
     UnhandledError,
     /// Provider error from another crate.
     ProviderError,
@@ -47,7 +47,7 @@ impl fmt::Display for DynaErrorKind {
 }
 
 /// Error type
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct DynaError {
     kind: DynaErrorKind,
     description: Option<String>,
@@ -89,5 +89,33 @@ impl From<DynaErrorKind> for DynaError {
             kind: kind,
             description: None,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_dynaerrorkind_as_str_success() {
+        assert_eq!(DynaErrorKind::UnhandledError.as_str(), "unhandled internal error");
+        assert_eq!(DynaErrorKind::ProviderError.as_str(), "provider error");
+        assert_eq!(DynaErrorKind::LockAlreadyAcquired.as_str(), "lock has been acquired by another processor");
+    }
+
+    #[test]
+    fn test_dynaerror_new_success() {
+        let err = DynaError::new(DynaErrorKind::ProviderError, None);
+
+        assert_eq!(err.kind(), DynaErrorKind::ProviderError);
+        assert_eq!(err.description, None);
+        assert_eq!(err.description(), "provider error");
+    }
+
+    #[test]
+    fn test_from_dynaerrorkind_to_dynaerror_success() {
+        let err = DynaError::new(DynaErrorKind::UnhandledError, None);
+
+        assert_eq!(err, DynaError::from(DynaErrorKind::UnhandledError));
     }
 }
