@@ -1,4 +1,4 @@
-Dynalock [![Build Status](https://img.shields.io/travis/chorusone/dynalock/master.svg)](https://travis-ci.org/chorusone/dynalock) [![Crates.io](https://img.shields.io/crates/v/dynalock.svg)](https://crates.io/crates/dynalock) [![Documentation](https://img.shields.io/badge/docs-current-blue.svg)](https://docs.rs/dynalock)
+Dynalock [![Build Status](https://img.shields.io/travis/ChorusOne/dynalock/master.svg)](https://travis-ci.org/ChorusOne/dynalock) [![Crates.io](https://img.shields.io/crates/v/dynalock.svg)](https://crates.io/crates/dynalock) [![Documentation](https://img.shields.io/badge/docs-current-blue.svg)](https://docs.rs/dynalock)
 ========
 
 A [lease] based distributed lock. Dynalock [algorithm] supports lease based
