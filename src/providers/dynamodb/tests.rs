@@ -16,10 +16,9 @@
 
 extern crate rusoto_mock;
 
-#[allow(unused_import)]
-use super::*;
-
 use std::default::Default;
+
+use super::*;
 
 use self::rusoto_mock::*;
 use rusoto_core::Region;
@@ -33,6 +32,16 @@ fn driver_input_default_is_sane() {
     assert_eq!(input.partition_key_value, String::from("singleton"));
     assert_eq!(input.token_field_name, String::from("rvn"));
     assert_eq!(input.duration_field_name, String::from("duration"));
+    assert_eq!(input.ttl_field_name, String::from("ttl"));
+    assert_eq!(input.ttl_value, DAY_SECONDS * 7);
+}
+
+#[test]
+fn lock_input_default_is_sane() {
+    let input = DynamoDbLockInput::default();
+
+    assert_eq!(input.timeout, Duration::from_secs(10));
+    assert_eq!(input.consistent_read, Some(false));
 }
 
 #[test]
@@ -106,4 +115,59 @@ fn refresh_lock_updates_current_token_success() {
     let result = lock.refresh_lock(&DynamoDbLockInput::default());
     assert!(result.is_ok());
     assert_eq!(lock.driver.current_token, String::from("test RVN token"));
+}
+
+#[test]
+fn refresh_lock_no_update_current_token_when_empty_success() {
+    let body = MockResponseReader::read_response(
+        "test_resources/dynamodb",
+        "get_empty_lock_item_success.json",
+    );
+    let mock = MockRequestDispatcher::with_status(200).with_body(&body);
+
+    // Prepare input for DynamoDbDriver
+    let input = DynamoDbDriverInput {
+        table_name: String::from("test_lock_table"),
+        partition_key_field_name: String::from("lock_id"),
+        ..Default::default()
+    };
+
+    let client = DynamoDbClient::new(mock, MockCredentialsProvider, Region::UsEast1);
+    let driver = DynamoDbDriver::new(client, &input);
+    let mut lock = DistLock::new(driver, Duration::from_secs(10));
+    assert!(lock.driver.current_token.is_empty());
+    lock.driver.current_token = String::from("test-manually-set RVN token");
+
+    let result = lock.refresh_lock(&DynamoDbLockInput::default());
+    assert!(result.is_ok());
+    assert_eq!(
+        lock.driver.current_token,
+        String::from("test-manually-set RVN token")
+    );
+}
+
+#[test]
+fn remaining_time_is_calculated_correctly_success() {
+    let body = MockResponseReader::read_response(
+        "test_resources/dynamodb",
+        "update_lock_item_success.json",
+    );
+    let mock = MockRequestDispatcher::with_status(200).with_body(&body);
+
+    // Prepare input for DynamoDbDriver
+    let input = DynamoDbDriverInput {
+        table_name: String::from("test_lock_table"),
+        partition_key_field_name: String::from("lock_id"),
+        ..Default::default()
+    };
+
+    let client = DynamoDbClient::new(mock, MockCredentialsProvider, Region::UsEast1);
+    let driver = DynamoDbDriver::new(client, &input);
+    let mut lock = DistLock::new(driver, Duration::from_secs(10));
+
+    let instant = lock.acquire_lock(&DynamoDbLockInput::default()).unwrap();
+    let remaining = lock.remaining(instant).unwrap();
+
+    assert_eq!(remaining.as_secs(), 9);
+    assert!(remaining.subsec_nanos() > 999900000);
 }
