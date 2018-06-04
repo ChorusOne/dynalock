@@ -147,6 +147,32 @@ fn refresh_lock_no_update_current_token_when_empty_success() {
 }
 
 #[test]
+fn release_lock_clears_current_token_success() {
+    let body = MockResponseReader::read_response(
+        "test_resources/dynamodb",
+        "update_lock_item_success.json",
+    );
+    let mock = MockRequestDispatcher::with_status(200).with_body(&body);
+
+    // Prepare input for DynamoDbDriver
+    let input = DynamoDbDriverInput {
+        table_name: String::from("test_lock_table"),
+        partition_key_field_name: String::from("lock_id"),
+        ..Default::default()
+    };
+
+    let client = DynamoDbClient::new(mock, MockCredentialsProvider, Region::UsEast1);
+    let driver = DynamoDbDriver::new(client, &input);
+    let mut lock = DistLock::new(driver, Duration::from_secs(10));
+    lock.driver.current_token = String::from("test RVN token");
+
+    let result = lock.release_lock(&DynamoDbLockInput::default());
+    assert!(result.is_ok());
+    println!("{}", lock.driver.current_token);
+    assert!(lock.driver.current_token.is_empty())
+}
+
+#[test]
 fn remaining_time_is_calculated_correctly_success() {
     let body = MockResponseReader::read_response(
         "test_resources/dynamodb",

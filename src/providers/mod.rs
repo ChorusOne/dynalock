@@ -12,7 +12,7 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
-//! Data store providers which provide a common API to storage of lock items.
+//! Distributed lock storage providers.
 
 #[cfg(feature = "dynamodb")]
 pub mod dynamodb;
