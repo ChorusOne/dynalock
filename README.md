@@ -4,7 +4,7 @@ Dynalock [![Build Status](https://img.shields.io/travis/chorusone/dynalock/maste
 A [lease] based distributed lock. Dynalock [algorithm] supports lease based
 distributed locking implementations through [providers] that support a strongly
 consistent Compare-And-Swap (CAS) operation, or at least the compare-and-set variant
-and a strongly consistent read operation.
+and an eventually consistent read operation.
 
 ## Usage
 
