@@ -16,5 +16,3 @@
 
 #[cfg(feature = "dynamodb")]
 pub mod dynamodb;
-
-pub mod mock;

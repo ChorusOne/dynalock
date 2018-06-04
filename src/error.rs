@@ -12,13 +12,13 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
-//! DynaLock error type and kinds.
+//! Dynalock error type and kinds.
 
 use core::fmt;
 use std::error::Error;
 use std::string::{String, ToString};
 
-/// Kinds of errors
+/// An enum of errors to represent the possible kinds of `DynaError`.
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum DynaErrorKind {
     /// Unhandled error from another crate or the standard library.
@@ -46,7 +46,8 @@ impl fmt::Display for DynaErrorKind {
     }
 }
 
-/// Error type
+/// The DynaError type is the only error type that can be returned from this
+/// crate's API.
 #[derive(Debug, PartialEq)]
 pub struct DynaError {
     kind: DynaErrorKind,
