@@ -11,7 +11,7 @@ categories = ["algorithms", "data-structures", "asynchronous"]
 keywords = ["distributed", "locking", "dynamodb", "lease", "advisory"]
 
 [badges]
-travis-ci = { repository = "chorusone/dynalock", branch = "master" }
+travis-ci = { repository = "ChorusOne/dynalock", branch = "master" }
 
 [features]
 default = ["dynamodb"]
